@@ -6,6 +6,7 @@ import {createUrl} from 'playroom';
 import {Stack} from '../Stack';
 import styles from './PatternsExample.module.scss';
 import GrowFrame from '../GrowFrame';
+import {withBasePath} from '../../utils/basePath';
 import Code from '../Code';
 import ExampleWrapper, {LinkButton} from '../ExampleWrapper';
 import {PatternExample} from '../../types';
@@ -19,23 +20,24 @@ const getISOStringYear = () => new Date().toISOString().split('T')[0];
 const PlayroomButton = ({code, title}: {code: string; title?: string}) => {
   const [encodedUrl, setEncodedUrl] = useState('');
   useEffect(() => {
-    setEncodedUrl(
-      createUrl({
-        baseUrl: '/sandbox/',
-        code: endent`
-          ${title ? `{/* ${title} */}` : ''}
-          {/* Generated on ${getISOStringYear()} from ${
-          window.location.href
-        } */}
-          {/* This example is for guidance purposes. Copying it will come with caveats. */}
-          ${/* intentional blank line */ ''}
-          ${code}
-        `,
-        // TODO: Is this correct?
-        themes: ['locale:en'],
-        paramType: 'search',
-      }),
-    );
+    // `createUrl`'s own `baseUrl` handling appends a trailing slash, which
+    // GitHub Pages resolves against `sandbox/index.html` — a file
+    // `trailingSlash: false` never emits. Build the query separately and prefix
+    // the extensionless route ourselves, the same way `previewUrl` does below.
+    const params = createUrl({
+      code: endent`
+        ${title ? `{/* ${title} */}` : ''}
+        {/* Generated on ${getISOStringYear()} from ${window.location.href} */}
+        {/* This example is for guidance purposes. Copying it will come with caveats. */}
+        ${/* intentional blank line */ ''}
+        ${code}
+      `,
+      // TODO: Is this correct?
+      themes: ['locale:en'],
+      paramType: 'search',
+    });
+
+    setEncodedUrl(`${withBasePath('/sandbox')}${params}`);
   }, [code, title]);
 
   return (
@@ -212,7 +214,9 @@ const PatternsExample = ({
       )
     : formattedCode;
 
-  const previewUrl = `/playroom/preview/index.html${createUrl({
+  const previewUrl = `${withBasePath(
+    '/playroom/preview/index.html',
+  )}${createUrl({
     code: previewCode,
     themes: ['locale:en'],
     paramType: 'search',
